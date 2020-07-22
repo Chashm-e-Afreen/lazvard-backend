@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/gofiber/cors"
@@ -31,7 +33,12 @@ func main() {
 	words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore := [][]string{}, [][]string{}, [][]string{}, []string{}, []string{}, [][]bool{}, []int{}
 	input := ""
 	sendResponses(app, input, words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore)
-	app.Listen(getPort())
+	cer, err := tls.LoadX509KeyPair("cert/server.crt", "cert/server.key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	config := &tls.Config{Certificates: []tls.Certificate{cer}}
+	app.Listen(getPort(), config)
 }
 
 func sendResponses(app *fiber.App, input string, words [][]string, closestScansion [][]string, islah [][]string, closestMeters []string, closestMeterNames []string, problematicWords [][]bool, ravaniScore []int) {
