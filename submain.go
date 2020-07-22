@@ -43,15 +43,12 @@ func test(input string) ([][]string, [][]string, [][]string, []string, []string,
 
 	dict := fetchDictFromFile()
 
-	fmt.Print(input)
 	temp := removeNuisances(input)
 	if len(temp) == 0 {
 		return nil, nil, nil, nil, nil, nil, []int{0}
 	}
 	words := splitInput(temp)
-
 	lineWeights := lineScansion(words, dict)
-	fmt.Println(lineWeights)
 
 	combinedWeights := [][][]string{}
 
@@ -219,7 +216,7 @@ func ravani(words [][]string, closestScansion [][]string, perfectMatch []bool) [
 		case !strings.HasPrefix(closestScansion[i][0], "تمام") && perfectMatch[i] == true:
 			for j := range words[i] {
 				//
-				if j > 0 && strings.HasSuffix(closestScansion[i][j-1], "1") {
+				if j > 0 && strings.HasSuffix(closestScansion[i][j-1], "1") && utf8.RuneCountInString(words[i][j-1]) == len(closestScansion[i][j-1]) {
 					lastLetter, _ := utf8.DecodeLastRuneInString(words[i][j-1])
 					firstLetter, _ := utf8.DecodeRuneInString(words[i][j])
 					if firstLetter == lastLetter {
@@ -227,16 +224,6 @@ func ravani(words [][]string, closestScansion [][]string, perfectMatch []bool) [
 					}
 				}
 
-				if strings.HasSuffix(words[i][j], "ِ") {
-					if j > 0 && strings.HasSuffix(closestScansion[i][j-1], "1") {
-
-						lastLetter, _ := utf8.DecodeLastRuneInString(words[i][j-1][:len(words[i][j-1])-2])
-						firstLetter, _ := utf8.DecodeRuneInString(words[i][j])
-						if firstLetter == lastLetter {
-							ravaniScore[i]--
-						}
-					}
-				}
 				hindiUlAsl := strings.Contains(words[i][j], "ٹ") || strings.Contains(words[i][j], "ڈ") || strings.Contains(words[i][j], "ڑ") || strings.Contains(words[i][j], "ھ")
 
 				if j < len(words[i])-1 && (strings.HasSuffix(words[i][j], "ا") || strings.HasSuffix(words[i][j], "ی") || strings.HasSuffix(words[i][j], "ے") || strings.HasSuffix(words[i][j], "ں")) {
