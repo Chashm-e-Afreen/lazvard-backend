@@ -30,9 +30,9 @@ func main() {
 		MaxAge:           0,
 	}))
 
-	words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore := [][]string{}, [][]string{}, [][]string{}, []string{}, []string{}, [][]bool{}, []int{}
+	words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore, dict := [][]string{}, [][]string{}, [][]string{}, []string{}, []string{}, [][]bool{}, []int{}, map[string][]string{}
 	input := ""
-	sendResponses(app, input, words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore)
+	sendResponses(app, input, words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore, dict)
 	cer, err := tls.LoadX509KeyPair("cert/server.crt", "cert/server.key")
 	if err != nil {
 		log.Fatal(err)
@@ -41,95 +41,40 @@ func main() {
 	app.Listen(getPort(), config)
 }
 
-func sendResponses(app *fiber.App, input string, words [][]string, closestScansion [][]string, islah [][]string, closestMeters []string, closestMeterNames []string, problematicWords [][]bool, ravaniScore []int) {
+func sendResponses(app *fiber.App, input string, words [][]string, closestScansion [][]string, islah [][]string, closestMeters []string, closestMeterNames []string, problematicWords [][]bool, ravaniScore []int, dict map[string][]string) {
 
 	app.Post("/words", func(c *fiber.Ctx) {
 
 		if len(words) == 0 || c.Body() != input {
 			input = c.Body()
 
-			words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore = test(input)
+			words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore, dict = test(input)
 		}
-
-		wordsJSON := encodeJSON(words)
-		c.Send(wordsJSON)
-	})
-
-	app.Post("/closestScansion", func(c *fiber.Ctx) {
-		if len(words) == 0 || c.Body() != input {
-			input = c.Body()
-			words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore = test(input)
-		}
-
-		for i := range closestScansion {
-			closestScansion[i] = getUrduNumerals(closestScansion[i])
-		}
-		closestScansionJSON := encodeJSON(closestScansion)
-		c.Send(closestScansionJSON)
-	})
-
-	app.Post("/islah", func(c *fiber.Ctx) {
-
-		if len(words) == 0 || c.Body() != input {
-			input = c.Body()
-			words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore = test(input)
-
-		}
-
 		for i := range islah {
 			islah[i] = getUrduNumerals(islah[i])
 		}
-		closestMeterKeysJSON := encodeJSON(islah)
-		c.Send(closestMeterKeysJSON)
-	})
-
-	app.Post("/closestMeters", func(c *fiber.Ctx) {
-
-		if len(words) == 0 || c.Body() != input {
-			input = c.Body()
-			words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore = test(input)
-
+		for i := range closestScansion {
+			closestScansion[i] = getUrduNumerals(closestScansion[i])
 		}
 
+		wordsJSON := encodeJSON(words)
+		closestScansionJSON := encodeJSON(closestScansion)
 		closestMetersJSON := encodeJSON(closestMeters)
-		c.Send(closestMetersJSON)
-	})
-
-	app.Post("/closestMeterNames", func(c *fiber.Ctx) {
-
-		if len(words) == 0 || c.Body() != input {
-			input = c.Body()
-			words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore = test(input)
-
-		}
-
+		closestMeterKeysJSON := encodeJSON(islah)
 		closestMeterNamesJSON := encodeJSON(closestMeterNames)
-		c.Send(closestMeterNamesJSON)
-
-	})
-
-	app.Post("/problematicWords", func(c *fiber.Ctx) {
-		if len(words) == 0 || c.Body() != input {
-			input = c.Body()
-			words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore = test(input)
-
-		}
 		problematicWordsJSON := encodeJSON(problematicWords)
-		c.Send(problematicWordsJSON)
-	})
-
-	app.Get("/ravani", func(c *fiber.Ctx) {
 		ravaniJSON := encodeJSON(ravaniScore)
-		c.Send(ravaniJSON)
+		newline := "\n"
+		c.Send(wordsJSON + newline + closestScansionJSON + newline + closestMeterKeysJSON + newline + closestMetersJSON + newline + closestMeterNamesJSON + newline + problematicWordsJSON + newline + ravaniJSON)
 	})
 
 }
 
-func encodeJSON(response interface{}) interface{} {
+func encodeJSON(response interface{}) string {
 
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	return responseJSON
+	return string(responseJSON)
 }

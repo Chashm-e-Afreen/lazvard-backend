@@ -18,16 +18,16 @@ var DefaultOptionsNew levenshtein.Options = levenshtein.Options{
 }
 
 func debug() {
-	temp1 := "کسی نے پوچھا کہ حسن کیا ہے"
-	temp5 := "ہم نے تیری مثال دے ڈالی"
-	newline := "\n"
+	temp1 := "صنم آخر کار نہیں ہوتا"
+	// temp5 := "ریختہ کے تمھی استاد نہیں ہو غالب"
+	// newline := "\n"
 	// temp2 := "ایک سودا زیاں سے اٹھتا ہے"
 	// temp3 := "پئے بیٹھا ہُوں جوش! علم و نظر کے سینکڑوں قُلزم "
 	// temp4 := "نکلتے ہیں کبھی تو چاندنی سے دُھوپ کے لشکر"
 	// temp4 := "عاشق اگر ہوئے تھے ناز و غرور کیا تھا"
 
-	words, closestScansion, closestMeterKeys, closestMeters, closestMeterNames, problematicWords, ravaniScore := test(temp1 + newline + temp5)
-
+	words, closestScansion, closestMeterKeys, closestMeters, closestMeterNames, problematicWords, ravaniScore, dict := test(temp1)
+	_ = dict
 	fmt.Println(words)
 	fmt.Println(closestScansion)
 	fmt.Println(closestMeterKeys)
@@ -37,7 +37,7 @@ func debug() {
 	fmt.Println(ravaniScore)
 }
 
-func test(input string) ([][]string, [][]string, [][]string, []string, []string, [][]bool, []int) {
+func test(input string) ([][]string, [][]string, [][]string, []string, []string, [][]bool, []int, map[string][]string) {
 	// const user string = "postgres"
 	// const DSN string = "host=localhost port=5432 user=postgres dbname=myDatabaseLughat sslmode=disable"
 
@@ -45,7 +45,7 @@ func test(input string) ([][]string, [][]string, [][]string, []string, []string,
 
 	temp := removeNuisances(input)
 	if len(temp) == 0 {
-		return nil, nil, nil, nil, nil, nil, []int{0}
+		return nil, nil, nil, nil, nil, nil, []int{0}, nil
 	}
 	words := splitInput(temp)
 	lineWeights := lineScansion(words, dict)
@@ -94,7 +94,7 @@ func test(input string) ([][]string, [][]string, [][]string, []string, []string,
 	default:
 
 	}
-	return words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore
+	return words, closestScansion, islah, closestMeters, closestMeterNames, problematicWords, ravaniScore, dict
 
 }
 
@@ -227,7 +227,7 @@ func ravani(words [][]string, closestScansion [][]string, perfectMatch []bool) [
 				hindiUlAsl := strings.Contains(words[i][j], "ٹ") || strings.Contains(words[i][j], "ڈ") || strings.Contains(words[i][j], "ڑ") || strings.Contains(words[i][j], "ھ")
 
 				if j < len(words[i])-1 && (strings.HasSuffix(words[i][j], "ا") || strings.HasSuffix(words[i][j], "ی") || strings.HasSuffix(words[i][j], "ے") || strings.HasSuffix(words[i][j], "ں")) {
-					if j > 0 && strings.HasSuffix(closestScansion[i][j-1], "1") {
+					if j > 0 && strings.HasSuffix(closestScansion[i][j], "1") {
 
 						lastLetter, _ := utf8.DecodeLastRuneInString(words[i][j-1][:len(words[i][j-1])-2])
 						firstLetter, _ := utf8.DecodeRuneInString(words[i][j])
@@ -247,9 +247,9 @@ func ravani(words [][]string, closestScansion [][]string, perfectMatch []bool) [
 						default:
 							if j > 0 && strings.HasSuffix(closestScansion[i][j], "1") {
 								if strings.HasSuffix(words[i][j], "ے") {
-									ravaniScore[i]--
-								} else {
 									ravaniScore[i] -= 2
+								} else {
+									ravaniScore[i]--
 								}
 							}
 						}
@@ -277,17 +277,13 @@ func genIslah(scansion [][]string, keys []string, perfectMatch []bool, tasbeeghO
 		if !strings.HasPrefix(scansion[i][0], "تمام الفاظ") {
 			if !perfectMatch[i] {
 				problematicWords[i] = make([]bool, len(closestScansion[i]))
-				if tasbeeghOazala[i] != 0 { //for muqatta bahoor
-					closestMeterKeys[i] = closestMeterKeys[i][:len(closestMeterKeys[i])/2]
-					closestMeterKeys[i] = closestMeterKeys[i] + "1" + closestMeterKeys[i]
-				}
 				temp := strings.Join(closestScansion[i][:], "")
 				editScript := levenshtein.EditScriptForStrings([]rune(temp), []rune(closestMeterKeys[i]), DefaultOptionsNew) //levenshtein script to optimise problematic words
 				count := 0
 				for j := range islah[i] {
 					operations := 0
 
-					for k := count + operations; k < count+len(islah[i][j])+operations; k++ {
+					for k := count; k < count+len(islah[i][j]); k++ {
 						switch editScript[k] {
 						case 0:
 							operations++
@@ -301,12 +297,18 @@ func genIslah(scansion [][]string, keys []string, perfectMatch []bool, tasbeeghO
 					}
 
 					islah[i][j] = closestMeterKeys[i][count : count+len(islah[i][j])+operations]
-
 					count += len(islah[i][j])
+					temp = strings.Join(islah[i][:], "")
+					editScript = levenshtein.EditScriptForStrings([]rune(temp), []rune(closestMeterKeys[i]), DefaultOptionsNew) //levenshtein script to optimise problematic words
+					if j == len(islah[i])-1 {
+						if count < len(closestMeterKeys[i]) {
+							islah[i][j] += closestMeterKeys[i][count:]
+						}
+					}
 				}
 				for t := range islah[i] {
 					if t > 0 && strings.HasPrefix(islah[i][t], "0") {
-						if len(islah[i][t-1]) > 2 { //avoids a situation when the suggested weight for a word is 1
+						if len(islah[i][t-1]) > 1 { //avoids a situation when the suggested weight for a word is 1
 							islah[i][t] = "1" + islah[i][t]
 							islah[i][t-1] = strings.TrimSuffix(islah[i][t-1], "1")
 							problematicWords[i][t-1] = true
@@ -320,6 +322,13 @@ func genIslah(scansion [][]string, keys []string, perfectMatch []bool, tasbeeghO
 							if islah[i][t] == scansion[i][t] {
 								problematicWords[i][t] = false
 							}
+						}
+					}
+					if t < len(islah[i])-1 && len(islah[i][t]) > 3 && strings.HasSuffix(islah[i][t], "11") {
+						for !strings.HasSuffix(islah[i][t], "01") {
+							islah[i][t] = strings.TrimSuffix(islah[i][t], "1")
+							islah[i][t+1] = "1" + islah[i][t+1]
+							problematicWords[i][t+1] = true
 						}
 					}
 
@@ -336,5 +345,58 @@ func genIslah(scansion [][]string, keys []string, perfectMatch []bool, tasbeeghO
 		}
 	}
 
+	return problematicWords, islah
+}
+
+func genIslahNew(scansion [][]string, keys []string, perfectMatch []bool, tasbeeghOazala []int) ([][]bool, [][]string) {
+	closestScansion := copyString2d(scansion)
+	problematicWords := make([][]bool, len(closestScansion))
+	closestMeterKeys := copyString1d(keys)
+	islah := closestScansion
+
+	for i := range closestScansion {
+		if !strings.HasPrefix(scansion[i][0], "تمام الفاظ") {
+			if !perfectMatch[i] {
+				problematicWords[i] = make([]bool, len(closestScansion[i]))
+
+				count := 0
+				for j := range closestScansion[i] {
+					if count+len(islah[i][j]) < len(closestMeterKeys[i]) {
+						islah[i][j] = closestMeterKeys[i][count : count+len(closestScansion[i][j])]
+						//if the key is longer
+						if j == len(islah[i])-1 && count < len(closestMeterKeys[i]) {
+							islah[i][j] += closestMeterKeys[i][count:]
+						}
+						count += len(islah[i][j])
+					}
+					for t := range islah[i] {
+						if t > 0 && strings.HasPrefix(islah[i][t], "0") {
+							islah[i][t] = strings.TrimPrefix(islah[i][t], "0")
+							islah[i][t-1] += "0"
+							problematicWords[i][t-1] = true
+							if islah[i][t] == scansion[i][t] {
+								problematicWords[i][t] = false
+							}
+						}
+						if t < len(islah[i])-1 && len(islah[i][t]) > 3 && strings.HasSuffix(islah[i][t], "11") {
+							for !strings.HasSuffix(islah[i][t], "01") {
+								islah[i][t] = strings.TrimSuffix(islah[i][t], "1")
+								islah[i][t+1] = "1" + islah[i][t+1]
+								problematicWords[i][t+1] = true
+							}
+						}
+
+					}
+				}
+			} else {
+				for j := range closestScansion[i] {
+					problematicWords[i] = make([]bool, len(closestScansion[i]))
+					problematicWords[i][j] = false
+				}
+			}
+		} else {
+			problematicWords[i] = []bool{true}
+		}
+	}
 	return problematicWords, islah
 }

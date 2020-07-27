@@ -5,7 +5,6 @@ import (
 
 	"strings"
 
-	levenshtein "github.com/agnivade/levenshtein"
 	levenshtein1 "github.com/texttheater/golang-levenshtein/levenshtein"
 )
 
@@ -45,8 +44,7 @@ func meterMatch(combinationKey string, bestMatch []string, sliceCombination []st
 
 	case len(bestMatch) != 0:
 		for i := range bestMatch {
-			closestMeterKey = bestMatch[i]
-			temp := levenshtein.ComputeDistance(combinationKey, bestMatch[i])
+			temp := levenshteinEnhanced(sliceCombination, combinationKey, bestMatch[i])
 			if temp < dist || i == 0 {
 				dist = temp
 				closestMeterKey = bestMatch[i]
@@ -55,7 +53,7 @@ func meterMatch(combinationKey string, bestMatch []string, sliceCombination []st
 
 	default:
 		for i := range meterList {
-			temp := levenshtein.ComputeDistance(combinationKey, meterList[i])
+			temp := levenshteinEnhanced(sliceCombination, combinationKey, meterList[i])
 			if temp < dist || i == 0 {
 				dist = temp
 				closestMeterKey = meterList[i]
@@ -66,7 +64,7 @@ func meterMatch(combinationKey string, bestMatch []string, sliceCombination []st
 
 	closestMeter = meters[closestMeterKey]
 	closestMeterName = meterNames[closestMeterKey]
-	dist = levenshtein.ComputeDistance(combinationKey, closestMeterKey)
+	dist = levenshteinEnhanced(sliceCombination, combinationKey, closestMeterKey)
 
 	if !perfectMatch && checkMuqatta(closestMeterKey) && dist < 2 { //tasbeeghOazala for muqatta bahoor
 		editScript := levenshtein1.EditScriptForStrings([]rune(closestMeterKey), []rune(combinationKey), levenshtein1.DefaultOptions)

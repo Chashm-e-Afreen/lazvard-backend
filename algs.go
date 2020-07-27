@@ -2,6 +2,8 @@ package main
 
 import (
 	"strings"
+
+	"github.com/texttheater/golang-levenshtein/levenshtein"
 )
 
 func cartN(a ...[]string) [][]string { //Cartesian product of n sets
@@ -149,7 +151,6 @@ func getUrduNumerals(closestScansion []string) []string {
 		if !strings.HasPrefix(closestScansion[i], "ان الفاظ") && !strings.HasPrefix(closestScansion[i], "تمام") {
 			closestScansion[i] = strings.Replace(closestScansion[i], "1", "۱", -1)
 			closestScansion[i] = strings.Replace(closestScansion[i], "0", "۰", -1)
-			// closestScansion[i] = reverse(closestScansion[i])
 		}
 	}
 
@@ -175,4 +176,23 @@ func copyString3d(src [][][]string) [][][]string {
 		dst[i] = copyString2d(src[i])
 	}
 	return dst
+}
+
+func levenshteinEnhanced(sliceCombination []string, combinationKey string, keyToBeCompared string) int {
+	dist := levenshtein.DistanceForStrings([]rune(combinationKey), []rune(keyToBeCompared), DefaultOptionsNew)
+	script := levenshtein.EditScriptForStrings([]rune(combinationKey), []rune(keyToBeCompared), DefaultOptionsNew)
+	count := 0
+	for i := range sliceCombination {
+		problematicTerm := false
+		for range sliceCombination[i] {
+			if script[count] != 3 {
+				problematicTerm = true
+			}
+			count++
+		}
+		if problematicTerm {
+			dist++
+		}
+	}
+	return dist
 }
